@@ -1,12 +1,63 @@
+"use client";
+
 import { Bell, Search } from "lucide-react";
+import { usePathname } from "next/navigation";
+
+const pageTitles: Record<
+  string,
+  {
+    title: string;
+    description: string;
+  }
+> = {
+  "/admin": {
+    title: "Dashboard",
+    description: "Overview of your platform",
+  },
+
+  "/admin/users": {
+    title: "Users",
+    description: "Manage FlowDesk users",
+  },
+
+  "/admin/subscriptions": {
+    title: "Subscriptions",
+    description: "Manage subscriptions and pricing plans",
+  },
+
+  "/admin/payments": {
+    title: "Payments",
+    description: "View payments and transaction history",
+  },
+
+  "/admin/analytics": {
+    title: "Analytics",
+    description: "Analyze platform performance",
+  },
+
+  "/admin/settings": {
+    title: "Settings",
+    description: "Configure FlowDesk settings",
+  },
+};
 
 export default function Header() {
+  const pathname = usePathname();
+
+  const currentPage = pageTitles[pathname] ?? {
+    title: "FlowDesk",
+    description: "Admin Console",
+  };
+
   return (
     <header className="flex h-20 items-center justify-between border-b border-zinc-200 bg-white px-8">
       <div>
-        <h1 className="text-xl font-semibold text-zinc-900">Dashboard</h1>
+        <h1 className="text-xl font-semibold text-zinc-900">
+          {currentPage.title}
+        </h1>
+
         <p className="text-sm text-zinc-500">
-          Overview of your platform
+          {currentPage.description}
         </p>
       </div>
 
