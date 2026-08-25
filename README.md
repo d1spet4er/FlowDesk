@@ -1,43 +1,72 @@
 # FlowDesk
 
-FlowDesk — production-like админ-панель SaaS-сервиса, созданная на Next.js, React, TypeScript, Prisma и SQLite.
+FlowDesk — full-stack SaaS admin dashboard, созданный на Next.js, TypeScript, Prisma, PostgreSQL и Auth.js.
 
-Проект разрабатывается как сильный full-stack проект для портфолио и демонстрирует архитектуру реального SaaS-приложения: авторизацию, CRUD-сценарии, работу с API, базой данных, аналитикой, ролями и адаптивным интерфейсом.
+Проект демонстрирует полноценную архитектуру административной панели: авторизацию, защищённые API, CRUD, подписки, платежи, аналитику, работу с базой данных, настройки администратора и адаптивный интерфейс.
+
+## Live Demo
+
+Проект доступен онлайн:
+
+https://flow-desk-self.vercel.app
+
+### Demo credentials
+
+```text
+Email: admin@flowdesk.dev
+Password: FlowDesk123!
+```
+
+> Данные используются только для демонстрации возможностей проекта.
 
 ## Возможности
 
 - Dashboard с общей статистикой
 - Управление пользователями
-- Добавление, редактирование и удаление пользователей
+- Добавление пользователей
+- Редактирование пользователей
+- Удаление пользователей
 - Поиск и фильтрация
 - Управление подписками
 - Просмотр платежей
-- Аналитика на основе данных из базы
+- Аналитика на основе реальных данных из базы
 - График выручки
 - Диаграмма распределения тарифов
 - Настройки администратора
-- Авторизация
-- Защищённые admin-маршруты
-- Роли пользователей
+- Авторизация через Auth.js
+- JWT-сессии
+- Role-based access
+- Защищённые `/admin` маршруты
+- Защищённые API endpoints
+- Loading / Error / Empty состояния
 - Адаптивный sidebar
 - Мобильная навигация
-- Loading / Error / Empty состояния
-- Prisma ORM
-- SQLite
-- Next.js API Route Handlers
+- Production deployment на Vercel
+- PostgreSQL database
 
 ## Стек
+
+### Frontend
 
 - Next.js
 - React
 - TypeScript
 - Tailwind CSS
-- Prisma ORM
-- SQLite
-- Auth.js / NextAuth
-- Recharts
 - Lucide React
+- Recharts
+
+### Backend
+
+- Next.js Route Handlers
+- Prisma ORM
+- PostgreSQL
+- Auth.js / NextAuth
 - bcryptjs
+
+### Deployment
+
+- Vercel
+- Prisma Postgres
 
 ## Структура проекта
 
@@ -63,6 +92,7 @@ app/
 
 lib/
 ├── prisma.ts
+└── require-admin.ts
 
 prisma/
 ├── migrations/
@@ -76,21 +106,32 @@ types/
 ├── settings.ts
 ├── subscription.ts
 └── user.ts
+
+auth.ts
+prisma.config.ts
 ```
 
 ## Архитектура
 
-FlowDesk использует full-stack архитектуру:
+FlowDesk использует full-stack архитектуру на основе Next.js App Router.
 
 ```text
 React UI
    ↓
 Next.js Route Handlers
    ↓
+Authentication / Authorization
+   ↓
 Prisma ORM
    ↓
-SQLite Database
+PostgreSQL
 ```
+
+Основная логика приложения разделена между пользовательским интерфейсом, API endpoints, серверной авторизацией и базой данных.
+
+## Авторизация
+
+FlowDesk использует Auth.js с Credentials Provider.
 
 Схема авторизации:
 
@@ -99,35 +140,74 @@ Login
   ↓
 Auth.js
   ↓
-Проверка credentials
+Проверка email и password
   ↓
-Admin в базе данных
+Admin из PostgreSQL
   ↓
-JWT-сессия
+bcrypt password verification
   ↓
-Защищённые маршруты /admin
+JWT session
+  ↓
+Protected admin area
+```
+
+Доступ к `/admin` разрешён только авторизованному пользователю с ролью:
+
+```text
+ADMIN
+```
+
+API административной панели также защищены отдельной серверной проверкой авторизации.
+
+Без активной сессии защищённые endpoints возвращают:
+
+```json
+{
+  "message": "Unauthorized"
+}
 ```
 
 ## Пользователи
 
-Раздел Users поддерживает:
+Раздел Users поддерживает полный CRUD:
 
-- загрузку пользователей через API
-- добавление пользователей
-- редактирование пользователей
-- удаление пользователей
+- получение пользователей через API
+- создание пользователя
+- изменение пользователя
+- удаление пользователя
 - поиск
 - фильтрацию по тарифу
 - фильтрацию по статусу
+
+Поддерживаемые статусы пользователей:
+
+```text
+Active
+Inactive
+Blocked
+```
+
+Поддерживаемые тарифы:
+
+```text
+Free
+Pro
+Business
+```
+
+Интерфейс также содержит:
+
 - loading state
 - error state
 - empty state
+- модальные окна
+- подтверждение удаления
 
-Данные пользователей сохраняются в SQLite через Prisma.
+Все изменения сохраняются в PostgreSQL.
 
 ## Подписки
 
-Подписки связаны с пользователями через Prisma relation.
+Каждый пользователь может иметь подписку.
 
 Поддерживаемые тарифы:
 
@@ -139,7 +219,15 @@ JWT-сессия
 
 - Active
 - Canceled
-- Past Due
+- PastDue
+
+Подписки связаны с пользователями через Prisma relations.
+
+```text
+User
+  ↓
+Subscription
+```
 
 ## Платежи
 
@@ -152,7 +240,13 @@ JWT-сессия
 - Failed
 - Refunded
 
-Денежные значения хранятся в базе в минимальных денежных единицах, чтобы избежать проблем с floating-point числами.
+Поддерживаемые методы:
+
+- Card
+- PayPal
+- BankTransfer
+
+Денежные значения хранятся в базе в минимальных денежных единицах.
 
 Например:
 
@@ -161,20 +255,22 @@ $29.00 → 2900
 $79.00 → 7900
 ```
 
+Такой подход позволяет избежать ошибок floating-point при работе с денежными значениями.
+
 ## Аналитика
 
-Analytics рассчитывается на основе реальных записей из базы данных.
+Раздел Analytics использует реальные данные из PostgreSQL.
 
-Сейчас отображаются:
+Отображаются:
 
 - общее количество пользователей
-- активные подписки
+- количество активных подписок
 - общая выручка
-- неуспешные платежи
-- выручка по месяцам
-- распределение подписок по тарифам
+- количество failed payments
+- выручка за последние месяцы
+- распределение пользователей по тарифам
 
-Для визуализации используется Recharts.
+Для визуализации данных используется Recharts.
 
 ## Настройки
 
@@ -185,24 +281,150 @@ Analytics рассчитывается на основе реальных зап
 - название компании
 - timezone
 
-Настройки сохраняются в базе данных через API и Prisma.
+Изменения сохраняются через API в PostgreSQL.
 
-## Авторизация
+Администратор определяется по ID из активной JWT-сессии.
 
-FlowDesk использует Auth.js с Credentials Provider.
+## API
 
-Маршруты `/admin` защищаются на сервере.
+В проекте используются Next.js Route Handlers.
 
-Для локальной разработки используется тестовый администратор:
+Основные endpoints:
+
+```text
+GET    /api/users
+POST   /api/users
+
+PUT    /api/users/:id
+DELETE /api/users/:id
+
+GET    /api/subscriptions
+
+GET    /api/payments
+
+GET    /api/analytics
+
+GET    /api/settings
+PUT    /api/settings
+
+GET/POST /api/auth/[...nextauth]
+```
+
+Administrative API endpoints защищены проверкой сессии и роли пользователя.
+
+## База данных
+
+В production используется PostgreSQL.
+
+Основные Prisma models:
+
+```text
+Admin
+User
+Subscription
+Payment
+```
+
+Связи между моделями:
+
+```text
+Admin
+
+User
+├── Subscription
+└── Payments
+
+Subscription
+├── User
+└── Payments
+
+Payment
+├── User
+└── Subscription
+```
+
+Prisma используется для:
+
+- migrations
+- database queries
+- relations
+- seed data
+- type-safe database access
+
+## Seed
+
+Проект содержит seed-скрипт:
+
+```text
+prisma/seed.ts
+```
+
+Он создаёт тестового администратора, пользователей, подписки и платежи.
+
+Demo administrator:
 
 ```text
 Email: admin@flowdesk.dev
 Password: FlowDesk123!
 ```
 
-Тестовые credentials не предназначены для production-использования.
+Пароль администратора хранится в базе в виде bcrypt hash.
 
-## Запуск проекта
+## Адаптивность
+
+FlowDesk поддерживает desktop и mobile интерфейсы.
+
+На больших экранах используется фиксированный sidebar.
+
+На мобильных устройствах:
+
+- sidebar скрыт
+- меню открывается по кнопке в Header
+- sidebar отображается поверх страницы
+- после выбора раздела меню автоматически закрывается
+- таблицы поддерживают горизонтальную прокрутку
+
+## Безопасность
+
+В проекте используются:
+
+- bcryptjs для хэширования паролей
+- Auth.js
+- JWT sessions
+- серверная проверка `/admin`
+- проверка роли ADMIN
+- защищённые API endpoints
+- environment variables
+- PostgreSQL credentials через переменные окружения
+
+Секретные данные не хранятся в GitHub.
+
+Файлы:
+
+```text
+.env
+.env.local
+```
+
+добавлены в `.gitignore`.
+
+## Environment Variables
+
+Для запуска проекта необходимы:
+
+```env
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
+AUTH_SECRET="your-secret"
+```
+
+`DATABASE_URL` используется приложением для подключения к PostgreSQL.
+
+`DIRECT_URL` используется Prisma CLI для migrations и seed.
+
+`AUTH_SECRET` используется Auth.js для работы с сессиями.
+
+## Локальный запуск
 
 Клонировать репозиторий:
 
@@ -222,10 +444,11 @@ cd FlowDesk
 npm install
 ```
 
-Создать файл `.env`:
+Создать `.env`:
 
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
 AUTH_SECRET="your-secret"
 ```
 
@@ -238,7 +461,7 @@ npx prisma generate
 Применить миграции:
 
 ```bash
-npx prisma migrate dev
+npx prisma migrate deploy
 ```
 
 Заполнить базу тестовыми данными:
@@ -247,111 +470,65 @@ npx prisma migrate dev
 npx prisma db seed
 ```
 
-Запустить dev-сервер:
+Запустить development server:
 
 ```bash
 npm run dev
 ```
 
-После запуска приложение будет доступно по адресу:
+Приложение будет доступно:
 
 ```text
 http://localhost:3000
 ```
 
-## API
+## Production Build
 
-В проекте используются Next.js Route Handlers.
-
-Основные endpoints:
-
-```text
-GET    /api/users
-POST   /api/users
-PUT    /api/users/:id
-DELETE /api/users/:id
-
-GET    /api/subscriptions
-
-GET    /api/payments
-
-GET    /api/analytics
-
-GET    /api/settings
-PUT    /api/settings
-
-GET/POST /api/auth/[...nextauth]
-```
-
-## База данных
-
-Сейчас FlowDesk использует SQLite.
-
-Основные модели Prisma:
-
-- Admin
-- User
-- Subscription
-- Payment
-
-Связи:
-
-```text
-User
-├── Subscription
-└── Payments
-
-Subscription
-└── Payments
-```
-
-SQLite используется для удобной локальной разработки.
-
-В production-проекте базу можно заменить на PostgreSQL.
-
-## Production build
-
-Для проверки production-сборки:
+Для проверки production build:
 
 ```bash
 npm run build
 ```
 
-Проект успешно проходит production build Next.js.
+После успешной сборки приложение можно запустить:
 
-## Адаптивность
+```bash
+npm start
+```
 
-FlowDesk поддерживает адаптивный интерфейс.
+## Deployment
 
-На десктопе используется постоянный sidebar.
+Production-версия FlowDesk размещена на Vercel.
 
-На мобильных устройствах sidebar скрывается и открывается через кнопку меню в Header.
+Live Demo:
 
-Таблицы поддерживают горизонтальную прокрутку на небольших экранах.
+https://flow-desk-self.vercel.app
 
-## Безопасность
+Production stack:
 
-В проекте используются:
+```text
+Next.js
+   ↓
+Vercel
+   ↓
+Prisma
+   ↓
+PostgreSQL
+```
 
-- хэширование паролей через bcryptjs
-- Auth.js
-- JWT-сессии
-- серверная защита admin routes
-- `.env` для секретных переменных
-- проверка авторизации в API настроек
+Prisma Client автоматически генерируется после установки зависимостей:
 
-Файл `.env` не должен попадать в GitHub.
+```text
+postinstall → prisma generate
+```
 
-## Что можно улучшить в будущем
+## Что можно добавить в будущем
 
-Возможные следующие этапы развития:
-
-- PostgreSQL
 - pagination
 - sorting
 - server-side filtering
 - password reset
-- дополнительные роли
+- несколько административных ролей
 - granular permissions
 - audit logs
 - notifications
@@ -361,25 +538,28 @@ FlowDesk поддерживает адаптивный интерфейс.
 - integration tests
 - end-to-end tests
 - Docker
-- CI/CD
+- GitHub Actions / CI
 - dark mode
 
 ## Цель проекта
 
-FlowDesk создаётся как portfolio-проект для демонстрации практических навыков full-stack разработки.
+FlowDesk создан как portfolio full-stack проект.
 
-Основной акцент:
+Основная цель — продемонстрировать практическую разработку SaaS admin dashboard, включая:
 
-- архитектура React-компонентов
-- TypeScript
 - Next.js App Router
-- API design
-- работа с базой данных
-- Prisma relations
+- React
+- TypeScript
+- архитектуру компонентов
+- REST-like API
+- Prisma ORM
+- PostgreSQL
+- database relations
 - authentication
 - authorization
 - CRUD
-- loading / error / empty состояния
-- аналитика
-- responsive UI
-- production build
+- работу с денежными данными
+- аналитику
+- loading / error / empty states
+- responsive design
+- production deployment
