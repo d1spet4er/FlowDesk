@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "../../../lib/prisma";
+import { requireAdmin } from "../../../lib/require-admin";
 
 import type {
   PaymentMethod,
@@ -8,6 +9,12 @@ import type {
 } from "../../../types/payment";
 
 export async function GET() {
+  const { error } = await requireAdmin();
+
+  if (error) {
+    return error;
+  }
+
   try {
     const payments = await prisma.payment.findMany({
       include: {

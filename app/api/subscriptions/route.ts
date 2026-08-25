@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "../../../lib/prisma";
+import { requireAdmin } from "../../../lib/require-admin";
 
 import type {
   SubscriptionStatus,
@@ -11,6 +12,12 @@ import type {
 } from "../../../types/user";
 
 export async function GET() {
+  const { error } = await requireAdmin();
+
+  if (error) {
+    return error;
+  }
+
   try {
     const subscriptions =
       await prisma.subscription.findMany({

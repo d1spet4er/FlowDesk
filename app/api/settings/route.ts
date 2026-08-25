@@ -5,11 +5,25 @@ import { prisma } from "../../../lib/prisma";
 
 import type { AdminSettings } from "../../../types/settings";
 
+function getAdminId(sessionUserId: string | undefined) {
+  if (!sessionUserId) {
+    return null;
+  }
+
+  const adminId = Number(sessionUserId);
+
+  if (!Number.isInteger(adminId) || adminId <= 0) {
+    return null;
+  }
+
+  return adminId;
+}
+
 export async function GET() {
   try {
     const session = await auth();
 
-    if (!session?.user?.email) {
+    if (!session?.user) {
       return NextResponse.json(
         {
           message: "Unauthorized",
@@ -20,9 +34,33 @@ export async function GET() {
       );
     }
 
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json(
+        {
+          message: "Forbidden",
+        },
+        {
+          status: 403,
+        }
+      );
+    }
+
+    const adminId = getAdminId(session.user.id);
+
+    if (!adminId) {
+      return NextResponse.json(
+        {
+          message: "Invalid admin session",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
     const admin = await prisma.admin.findUnique({
       where: {
-        email: session.user.email,
+        id: adminId,
       },
     });
 
@@ -59,7 +97,7 @@ export async function PUT(request: Request) {
   try {
     const session = await auth();
 
-    if (!session?.user?.email) {
+    if (!session?.user) {
       return NextResponse.json(
         {
           message: "Unauthorized",
@@ -70,9 +108,38 @@ export async function PUT(request: Request) {
       );
     }
 
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json(
+        {
+          message: "Forbidden",
+        },
+        {
+          status: 403,
+        }
+      );
+    }
+
+    const adminId = getAdminId(session.user.id);
+
+    if (!adminId) {
+      return NextResponse.json(
+        {
+          message: "Invalid admin session",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
     const body = (await request.json()) as AdminSettings;
 
-    if (!body.name?.trim()) {
+    const name = body.name?.trim();
+    const email = body.email?.trim().toLowerCase();
+    const companyName = body.companyName?.trim();
+    const timezone = body.timezone?.trim();
+
+    if (!name) {
       return NextResponse.json(
         {
           message: "Name is required",
@@ -83,7 +150,7 @@ export async function PUT(request: Request) {
       );
     }
 
-    if (!body.email?.trim()) {
+    if (!email) {
       return NextResponse.json(
         {
           message: "Email is required",
@@ -94,7 +161,7 @@ export async function PUT(request: Request) {
       );
     }
 
-    if (!body.companyName?.trim()) {
+    if (!companyName) {
       return NextResponse.json(
         {
           message: "Company name is required",
@@ -105,16 +172,41 @@ export async function PUT(request: Request) {
       );
     }
 
-    const emailOwner = await prisma.admin.findUnique({
+    if (!timezone) {
+      return NextResponse.json(
+        {
+          message: "Timezone is required",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const existingAdmin = await prisma.admin.findUnique({
       where: {
-        email: body.email.trim().toLowerCase(),
+        id: adminId,
       },
     });
 
-    if (
-      emailOwner &&
-      emailOwner.email !== session.user.email
-    ) {
+    if (!existingAdmin) {
+      return NextResponse.json(
+        {
+          message: "Admin not found",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    const emailOwner = await prisma.admin.findUnique({
+      where: {
+        email,
+      },
+    });
+
+    if (emailOwner && emailOwner.id !== adminId) {
       return NextResponse.json(
         {
           message: "Email is already in use",
@@ -127,14 +219,13 @@ export async function PUT(request: Request) {
 
     const updatedAdmin = await prisma.admin.update({
       where: {
-        email: session.user.email,
+        id: adminId,
       },
-
       data: {
-        name: body.name.trim(),
-        email: body.email.trim().toLowerCase(),
-        timezone: body.timezone,
-        companyName: body.companyName.trim(),
+        name,
+        email,
+        timezone,
+        companyName,
       },
     });
 

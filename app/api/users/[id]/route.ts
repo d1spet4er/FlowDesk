@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "../../../../lib/prisma";
+import { requireAdmin } from "../../../../lib/require-admin";
 
 import type {
   UserPlan,
@@ -24,6 +25,12 @@ export async function PUT(
   request: Request,
   context: RouteContext
 ) {
+  const { error } = await requireAdmin();
+
+  if (error) {
+    return error;
+  }
+
   try {
     const { id } = await context.params;
 
@@ -127,6 +134,12 @@ export async function DELETE(
   _request: Request,
   context: RouteContext
 ) {
+  const { error } = await requireAdmin();
+
+  if (error) {
+    return error;
+  }
+
   try {
     const { id } = await context.params;
 
