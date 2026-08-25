@@ -1,22 +1,30 @@
-import Sidebar from "../components/Sidebar";
-import Header from "../components/Header";
+import { redirect } from "next/navigation";
 
-export default function AdminLayout({
+import { auth } from "../../auth";
+
+import AuthProvider from "../components/AuthProvider";
+import AdminShell from "../components/AdminShell";
+
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  if (session.user.role !== "ADMIN") {
+    redirect("/login");
+  }
+
   return (
-    <div className="min-h-screen bg-zinc-100">
-      <Sidebar />
-
-      <div className="ml-64">
-        <Header />
-
-        <main className="p-8">
-          {children}
-        </main>
-      </div>
-    </div>
+    <AuthProvider>
+      <AdminShell>
+        {children}
+      </AdminShell>
+    </AuthProvider>
   );
 }

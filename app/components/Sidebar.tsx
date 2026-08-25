@@ -2,14 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
 import {
-  LayoutDashboard,
-  Users,
-  CreditCard,
-  Package,
   BarChart3,
+  CreditCard,
+  LayoutDashboard,
+  Package,
   Settings,
+  Users,
+  X,
 } from "lucide-react";
+
+type SidebarProps = {
+  isOpen?: boolean;
+  onClose?: () => void;
+};
 
 const menu = [
   {
@@ -44,47 +51,84 @@ const menu = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({
+  isOpen = false,
+  onClose,
+}: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="w-60 border-r border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-6 py-5">
-        <h1 className="text-xl font-bold text-slate-900">FlowDesk</h1>
-        <p className="text-xs text-slate-500">Admin Console</p>
-      </div>
+    <>
+      {isOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar overlay"
+          onClick={onClose}
+          className="fixed inset-0 z-30 bg-black/30 lg:hidden"
+        />
+      )}
 
-      <nav className="p-3">
-        <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Основное
-        </p>
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-zinc-200 bg-white transition-transform duration-200 lg:translate-x-0 ${
+          isOpen
+            ? "translate-x-0"
+            : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-5">
+          <div>
+            <h1 className="text-xl font-bold text-zinc-900">
+              FlowDesk
+            </h1>
 
-        <div className="space-y-1">
-          {menu.map((item) => {
-            const Icon = item.icon;
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Admin Console
+            </p>
+          </div>
 
-            const isActive =
-              item.href === "/admin"
-                ? pathname === "/admin"
-                : pathname.startsWith(item.href);
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                  isActive
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                <span>{item.title}</span>
-              </Link>
-            );
-          })}
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-100 lg:hidden"
+          >
+            <X size={18} />
+          </button>
         </div>
-      </nav>
-    </aside>
+
+        <nav className="flex-1 p-3">
+          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            Основное
+          </p>
+
+          <div className="space-y-1">
+            {menu.map((item) => {
+              const Icon = item.icon;
+
+              const isActive =
+                item.href === "/admin"
+                  ? pathname === "/admin"
+                  : pathname.startsWith(item.href);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onClose}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                    isActive
+                      ? "bg-zinc-900 text-white"
+                      : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                  }`}
+                >
+                  <Icon size={17} />
+
+                  <span>{item.title}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      </aside>
+    </>
   );
 }
